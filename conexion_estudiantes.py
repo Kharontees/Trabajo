@@ -3,26 +3,75 @@ import pyodbc
 import pwinput
 from dotenv import load_dotenv
 import os
+import time
+import hashlib
 
+# ================= Utilidades =================
+def _hash_password(raw_password: str, salt: str) -> str:
+    return hashlib.sha256((salt + raw_password).encode('utf-8')).hexdigest()
+
+def validar_semestre(valor: str) -> bool:
+    """Valida formato de semestre esperado: YYYY-1 o YYYY-2"""
+    if not valor or len(valor) != 6:
+        return False
+    partes = valor.split('-')
+    if len(partes) != 2:
+        return False
+    anio, tramo = partes
+    if not (anio.isdigit() and len(anio) == 4):
+        return False
+    if tramo not in ("1", "2"):
+        return False
+    return True
 def login():
-    USUARIO = "admin"
-    PASSWORD = "1234"
+
+    load_dotenv()
+    admin_user = os.getenv("ADMIN_USER")
+    admin_salt = os.getenv("ADMIN_SALT", "default_salt")
+    admin_hash = os.getenv("ADMIN_PASSWORD_HASH")
+
+    if not admin_user or not admin_hash:
+        admin_user = admin_user or "admin"
+        admin_hash = _hash_password("admin", admin_salt)
+        print("\033[33m[AVISO] Falta configuración segura de login (.env). Usando credenciales por defecto admin/admin. Cambie esto pronto.\033[0m")
+
+    MAX_INTENTOS = 3
     print("=== SISTEMA ACADEMICO DE INSCRIPCION ===")
-    for _ in range(3):
+    for intento in range(1, MAX_INTENTOS + 1):
         usuario = input("Usuario: ").strip()
         password = pwinput.pwinput("Contraseña: ").strip()
-        if usuario == USUARIO and password == PASSWORD:
+        if usuario == admin_user and _hash_password(password, admin_salt) == admin_hash:
             print("\033[92mLogin exitoso.\033[0m")
+            time.sleep(0.6)
             clear = lambda: os.system('cls')
             clear()
             return True
         else:
-            print("\033[31mUsuario o contraseña incorrectos.\033[0m")
-    print("Demasiados intentos fallidos. Saliendo...")
-    input("Presione Enter para salir...")
-    
-    return False
+            restantes = MAX_INTENTOS - intento
+            print(f"\033[31mCredenciales inválidas. Intentos restantes: {restantes}\033[0m")
+            if restantes:
+                time.sleep(min(1.5 * intento, 4))
 
+    print("\033[31mDemasiados intentos fallidos. Saliendo...\033[0m")
+    input("Presione Enter para salir...")
+    return False
+def mostrar_menu():
+    print("\n--- MENÚ PRINCIPAL ---")
+    print("1. Listar estudiantes")
+    print("2. Agregar estudiante")
+    print("3. Buscar estudiante por nombre")
+    print("4. Eliminar estudiante por ID")
+    print("5. Modificar estudiante por ID")
+    print("6. Listar profesores y sus cursos")
+    print("7. Eliminar profesor por ID")
+    print("8. Agregar estudiante a curso")
+    print("9. Crear curso")
+    print("10. Crear profesor")
+    print("11. Listar cursos (detalle)")
+    print("12. Listar estudiantes por curso")
+    print("13. Salir")
+
+# ================= Clase de Conexión =================
 class ConexionBD:
 
     def __init__(self):
@@ -72,20 +121,7 @@ class ConexionBD:
             print("Error al ejecutar la instrucción:", e)
             self.conexion.rollback()
 
-
-def mostrar_menu():
-    print("\n--- MENÚ PRINCIPAL ---")
-    print("1. Listar estudiantes")
-    print("2. Agregar estudiante")
-    print("3. Buscar estudiante por nombre")
-    print("4. Eliminar estudiante por ID")
-    print("5. Modificar estudiante por ID")
-    print("6. Listar profesores y sus cursos")
-    print("7. Eliminar profesor por ID")
-    print("8. Agregar estudiante a curso")
-    print("9. Listar cursos")
-    print("10. Salir")
-
+# ================= Función Principal =================
 
 def main():
     db = ConexionBD()
@@ -290,17 +326,126 @@ def main():
             except Exception as e:
                 print("Error al agregar estudiante al curso:", e)
         
+        # CREAR CURSO
         elif opcion == "9":
-            print("----Lista de cursos-----")
+            print("\n--- Crear Curso ---")
             try:
-                cursos = db.ejecutar_consulta("SELECT * FROM cursos")
-                for curso in cursos:
-                    print(f"Curso Id: \033[31m{curso[0]}\033[0m, Nombre: \033[92m{curso[1]}\033[0m")
+                nombre_curso = input("Nombre del curso: ").strip()
+                if not nombre_curso or len(nombre_curso) < 3:
+                    print("Nombre inválido.")
+                    continue
+                semestre = input("Semestre (formato YYYY-1 o YYYY-2): ").strip()
+                if not validar_semestre(semestre):
+                    print("Formato de semestre inválido.")
+                    continue
+                profesores = db.ejecutar_consulta("SELECT id, nombre FROM profesores")
+                if not profesores:
+                    print("Debe crear un profesor antes de crear cursos.")
+                    continue
+                print("Profesores disponibles:")
+                for p in profesores:
+                    print(f"Profesor Id: {p[0]}, Nombre: {p[1]}")
+                try:
+                    profesor_id = int(input("Ingrese el ID del profesor responsable: "))
+                except ValueError:
+                    print("ID inválido.")
+                    continue
+                existe_prof = [p for p in profesores if p[0] == profesor_id]
+                if not existe_prof:
+                    print("No existe un profesor con ese ID.")
+                    continue
+                # Intentar insertar considerando que la tabla tenga columna semestre
+                try:
+                    db.ejecutar_instruccion(
+                        "INSERT INTO cursos (nombre, semestre, profesor_id) VALUES (?, ?, ?)",
+                        (nombre_curso.capitalize(), semestre, profesor_id)
+                    )
+                except Exception as e:
+                    # fallback por si la tabla aún no tiene semestre
+                    if 'column' in str(e).lower() and 'semestre' in str(e).lower():
+                        print("La columna 'semestre' no existe en la tabla 'cursos'. Ejecute: ALTER TABLE cursos ADD semestre NVARCHAR(10);")
+                    else:
+                        print("Error al crear el curso:", e)
+            except Exception as e:
+                print("Error al procesar la creación del curso:", e)
+
+        # CREAR PROFESOR
+        elif opcion == "10":
+            print("\n--- Crear Profesor ---")
+            try:
+                nombre_prof = input("Nombre del profesor: ").strip()
+                if not nombre_prof or len(nombre_prof) < 3:
+                    print("Nombre inválido.")
+                    continue
+                nombre_prof = nombre_prof.capitalize()
+                db.ejecutar_instruccion(
+                    "INSERT INTO profesores (nombre) VALUES (?)",
+                    (nombre_prof,)
+                )
+            except Exception as e:
+                print("Error al crear profesor:", e)
+
+        # LISTAR CURSOS DETALLE
+        elif opcion == "11":
+            print("\n--- Lista de Cursos ---")
+            try:
+                # Intentar traer semestre; si no existe la columna, usar sin ella
+                cursos = []
+                try:
+                    cursos = db.ejecutar_consulta("SELECT id, nombre, semestre, profesor_id FROM cursos")
+                    tiene_semestre = True
+                except Exception:
+                    cursos = db.ejecutar_consulta("SELECT id, nombre, profesor_id FROM cursos")
+                    tiene_semestre = False
+                profesores = {p[0]: p[1] for p in db.ejecutar_consulta("SELECT id, nombre FROM profesores")}
+                if not cursos:
+                    print("No hay cursos registrados.")
+                for c in cursos:
+                    if tiene_semestre:
+                        cid, nombre, semestre, pid = c
+                        prof_nombre = profesores.get(pid, 'Sin profesor')
+                        print(f"Curso Id: \033[31m{cid}\033[0m, Nombre: \033[92m{nombre}\033[0m, Semestre: {semestre}, Profesor: {prof_nombre}")
+                    else:
+                        cid, nombre, pid = c
+                        prof_nombre = profesores.get(pid, 'Sin profesor')
+                        print(f"Curso Id: \033[31m{cid}\033[0m, Nombre: \033[92m{nombre}\033[0m, Profesor: {prof_nombre}")
             except Exception as e:
                 print("Error al recuperar la lista de cursos:", e)
-        #SALIR
 
-        elif opcion == "10":
+        # LISTAR ESTUDIANTES POR CURSO
+        elif opcion == "12":
+            print("\n--- Estudiantes por Curso ---")
+            try:
+                cursos = db.ejecutar_consulta("SELECT id, nombre FROM cursos")
+                if not cursos:
+                    print("No hay cursos.")
+                    continue
+                for c in cursos:
+                    print(f"Curso Id: {c[0]}, Nombre: {c[1]}")
+                try:
+                    curso_target = int(input("Ingrese el ID del curso: "))
+                except ValueError:
+                    print("ID inválido.")
+                    continue
+                existe = [c for c in cursos if c[0] == curso_target]
+                if not existe:
+                    print("Curso no encontrado.")
+                    continue
+                insc = db.ejecutar_consulta("SELECT estudiante_id FROM inscripciones WHERE curso_id = ?", (curso_target,))
+                if not insc:
+                    print("No hay estudiantes inscritos en este curso.")
+                    continue
+                est_ids = [i[0] for i in insc]
+                estudiantes = db.ejecutar_consulta("SELECT id, nombre, edad FROM estudiantes")
+                print(f"\nEstudiantes inscritos en {existe[0][1]}:")
+                for e in estudiantes:
+                    if e[0] in est_ids:
+                        print(f" - Id: {e[0]} Nombre: {e[1]} Edad: {e[2]}")
+            except Exception as e:
+                print("Error al listar estudiantes por curso:", e)
+
+        # SALIR
+        elif opcion == "13":
             print("\nSaliendo...")
             db.cerrar_conexion()
             break
@@ -310,5 +455,5 @@ def main():
             print("Opción inválida. Intente de nuevo.")
             continue
 if __name__ == "__main__":
-    #if login():
-    main()
+    if login():
+        main()
