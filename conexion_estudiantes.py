@@ -42,6 +42,8 @@ class ConexionBD:
                 f'UID={self.usuario};'
                 f'PWD={self.contrasena}'
             )
+            clear = lambda: os.system('cls')
+            clear()
             print("\033[92mConexión exitosa a SQL Server.\033[0m")
         except Exception as e:
             print("\033[31mError al conectar a la base de datos:\033[0m", e)
@@ -240,12 +242,24 @@ def main():
         elif opcion == "8":
             print("\n--- Agregar Estudiante a Curso ---")
             try:
+                estudiantes = db.ejecutar_consulta("SELECT * FROM estudiantes")
+                print("Estudiantes:")
+                for est in estudiantes:
+                    print(f"Estudiante Id: \033[31m{est[0]}\033[0m, Nombre: \033[92m{est[1]}\033[0m, Edad: {est[2]}")
+                print("")
+                cursos = db.ejecutar_consulta("SELECT * FROM cursos")
+                print("Cursos:")
+                for curso in cursos:
+                    print(f"Curso Id: \033[31m{curso[0]}\033[0m, Nombre: \033[92m{curso[1]}\033[0m")
+                print("")
                 agregar_estudiante_a_curso = input("Ingrese el ID del estudiante a agregar al curso: ")
+
                 try:
                     estudiante_id = int(agregar_estudiante_a_curso)
                 except ValueError:
                     print("El ID del estudiante debe ser un número válido.")
                     continue
+
                 estudiante = db.ejecutar_consulta("SELECT nombre FROM estudiantes WHERE id = ?", (estudiante_id,))
                 if not estudiante:
                     print("No existe un estudiante con ese ID.")
@@ -260,11 +274,19 @@ def main():
                 if not curso:
                     print("No existe un curso con ese ID.")
                     continue
-                db.ejecutar_instruccion(
-                    "INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (?, ?)",
+                # Validar si ya está inscrito
+                ya_inscrito = db.ejecutar_consulta(
+                    "SELECT 1 FROM inscripciones WHERE estudiante_id = ? AND curso_id = ?",
                     (estudiante_id, curso_id)
                 )
-                print(f"Estudiante '{estudiante[0][0]}' agregado al curso exitosamente: {curso[0][0]}")
+                if ya_inscrito:
+                    print(f"\033[31mEl estudiante ya está inscrito en ese curso.\033[0m")
+                else:
+                    db.ejecutar_instruccion(
+                        "INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (?, ?)",
+                        (estudiante_id, curso_id)
+                    )
+                    print(f"Estudiante \033[92m{estudiante[0][0]}\033[0m agregado al curso exitosamente: \033[92m{curso[0][0]}\033[0m")
             except Exception as e:
                 print("Error al agregar estudiante al curso:", e)
         
@@ -277,17 +299,16 @@ def main():
             except Exception as e:
                 print("Error al recuperar la lista de cursos:", e)
         #SALIR
+
         elif opcion == "10":
             print("\nSaliendo...")
             db.cerrar_conexion()
-            input("Presione Enter para salir...")
             break
         else:
             clear = lambda: os.system('cls')
             clear()
             print("Opción inválida. Intente de nuevo.")
-            
-    db.cerrar_conexion()
+            continue
 if __name__ == "__main__":
     #if login():
     main()

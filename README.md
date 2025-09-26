@@ -1,53 +1,70 @@
-# Conexión a base de datos MSSQL
+# Sistema Académico de Inscripción
 
-Este proyecto muestra cómo conectar Python con una base de datos Microsoft SQL Server utilizando la librería `pyodbc` y manejando las credenciales de forma segura con `python-dotenv`.
+Este proyecto es una aplicación de consola en Python que permite gestionar estudiantes, profesores, cursos e inscripciones en una base de datos SQL Server El sistema está diseñado para ser simple, robusto y fácil de usar desde la terminal.
 
-## Librerías necesarias
+## Características principales
+- **Login seguro** para acceso al sistema.
+- **Gestión de estudiantes**: alta, baja, modificación, búsqueda y listado con cursos inscritos.
+- **Gestión de profesores**: listado, eliminación (con validación de cursos asignados).
+- **Gestión de cursos**: listado de cursos y asignación de estudiantes.
+- **Inscripción de estudiantes a cursos** con validación para evitar duplicados.
+- **Manejo de errores** y mensajes claros para el usuario.
+- **Variables de entorno** para credenciales de base de datos (usando `.env`).
 
+## Requisitos
+- Python 3.7+
+- SQL Server (local o remoto)
+- Paquetes Python:
+	- `pyodbc`
+	- `python-dotenv`
+	- `pwinput`
+
+Instala los paquetes necesarios con:
 ```bash
-pip install pyodbc python-dotenv
+pip install pyodbc python-dotenv pwinput
 ```
 
-## Archivos del proyecto
+## Configuración
+1. Crea un archivo `.env` en la raíz del proyecto con el siguiente contenido:
+	 ```env
+	 DB_SERVER=tu_servidor_sql
+	 DB_NAME=tu_BD
+	 DB_USER=tu_usuario
+	 DB_PASSWORD=tu_contraseña
+	 ```
 
-- `.env`: Variables de entorno con credenciales de conexión.
-- `conexion_estudiantes.py`: Script interactivo en consola para listar y agregar estudiantes.
-- `crear_base_datos.sql`: Script SQL para crear la base de datos `EstudiantesDB` y la tabla `estudiantes` con algunos datos iniciales.
+2. Asegúrate de tener la base de datos y las tablas creadas. Puedes usar el script `crear_base_datos.sql` incluido en el repositorio.
+
+## Uso
+Ejecuta el archivo principal desde la terminal:
+```bash
+python conexion_estudiantes.py
+```
+
+Sigue las instrucciones del menú para realizar las operaciones disponibles:
+- Listar, agregar, buscar, eliminar y modificar estudiantes
+- Listar profesores y sus cursos
+- Eliminar profesor (solo si no tiene cursos asignados)
+- Inscribir estudiantes en cursos (sin duplicados)
+- Listar cursos
+- Salir del sistema
+
+## Notas de implementación
+- El sistema valida que los nombres ingresados comiencen con mayúscula.
+- No permite eliminar profesores con cursos asignados.
+- No permite inscribir dos veces al mismo estudiante en el mismo curso.
+- El archivo `.env` debe estar en `.gitignore` para no exponer credenciales.
+
+## Estructura del proyecto
+```
+CASO/
+	├─ conexion_estudiantes.py
+	├─ crear_base_datos.sql
+	├─ README.md
+	└─ .env (no incluido en el repo)
+```
+
+## Autor
+- Desarrollado por Diego Ceballos
 
 ---
-
-## Ejercicios sugeridos para estudiantes
-
-### 1. Agregar Validaciones
-Modifica el código para que no se puedan insertar estudiantes con:
-- Edad menor a 15 o mayor a 99.
-- Nombre vacío o menor a 3 caracteres.
-
-### 2. Buscar Estudiante por Nombre
-Agrega una opción al menú para buscar estudiantes por nombre (uso de `LIKE` en SQL).
-
-### 3. Eliminar Estudiante
-Agrega una opción al menú para eliminar estudiantes por su ID.
-
-### 4. Modificar Edad de un Estudiante
-Agrega una opción para actualizar la edad de un estudiante existente.
-
-### 5. Reporte de Estudiantes Mayores de Edad
-Agrega una opción para mostrar estudiantes con edad ≥ 18.
-
----
-
-## Recomendaciones
-
-- No subas el archivo `.env` a tu repositorio GitHub.
-- Usa `try/except` para capturar errores de conexión o SQL.
-- Siempre cierra la conexión con `cerrar_conexion()` al final del programa.
-
-## Opciones
-- ## 1. Listar Estudiantes
-- ## 2. Agregar estudiante
-- ## 3. Buscar estudiante por nombre
-- ## 4. Eliminar estudiante por ID
-- ## 5. Modificar estudiante por ID
-- ## 6. Reporte de estudiantes por edad
-- ## 7. Salir
