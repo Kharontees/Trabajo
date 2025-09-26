@@ -1,4 +1,4 @@
 # Ignora archivos de entorno    
 .env
 .venv
-venv/
+/.venv
