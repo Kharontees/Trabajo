@@ -4,7 +4,7 @@ import pwinput
 from dotenv import load_dotenv
 import os
 
-"""def login():
+def login():
     USUARIO = "admin"
     PASSWORD = "1234"
     print("=== SISTEMA ACADEMICO DE INSCRIPCION ===")
@@ -21,7 +21,7 @@ import os
     print("Demasiados intentos fallidos. Saliendo...")
     input("Presione Enter para salir...")
     
-    return False"""
+    return False
 
 class ConexionBD:
 
