@@ -44,10 +44,10 @@ Agrega una opción para mostrar estudiantes con edad ≥ 18.
 - Siempre cierra la conexión con `cerrar_conexion()` al final del programa.
 
 ## Opciones
-- 1. Listar Estudiantes
-- 2. Agregar estudiante
-- 3. Buscar estudiante por nombre
-- 4. Eliminar estudiante por ID
-- 5. Modificar estudiante por ID
-- 6. Reporte de estudiantes por edad
-- 7. Salir
+- ## 1. Listar Estudiantes
+- ## 2. Agregar estudiante
+- ## 3. Buscar estudiante por nombre
+- ## 4. Eliminar estudiante por ID
+- ## 5. Modificar estudiante por ID
+- ## 6. Reporte de estudiantes por edad
+- ## 7. Salir
