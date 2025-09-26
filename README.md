@@ -2,8 +2,11 @@
 
 Este proyecto es una aplicación de consola en Python que permite gestionar estudiantes, profesores, cursos e inscripciones en una base de datos SQL Server El sistema está diseñado para ser simple, robusto y fácil de usar desde la terminal.
 
-## Características principales
-- **Login seguro** para acceso al sistema.
+- **Login seguro** para acceso al sistema (usuario y contraseña requeridos al iniciar el programa).
+## Login
+Al iniciar el sistema, se solicitará un usuario y una contraseña para acceder al menú principal. Por defecto, el usuario es `admin` y la contraseña es `1234` (puedes modificar estos valores en el código si lo deseas).
+
+Si el login falla tres veces, el programa se cerrará automáticamente.
 - **Gestión de estudiantes**: alta, baja, modificación, búsqueda y listado con cursos inscritos.
 - **Gestión de profesores**: listado, eliminación (con validación de cursos asignados).
 - **Gestión de cursos**: listado de cursos y asignación de estudiantes.
