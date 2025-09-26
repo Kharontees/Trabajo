@@ -1,7 +1,27 @@
-import pyodbc
 
+import pyodbc
+import pwinput
 from dotenv import load_dotenv
 import os
+
+"""def login():
+    USUARIO = "admin"
+    PASSWORD = "1234"
+    print("=== SISTEMA ACADEMICO DE INSCRIPCION ===")
+    for _ in range(3):
+        usuario = input("Usuario: ").strip()
+        password = pwinput.pwinput("Contraseña: ").strip()
+        if usuario == USUARIO and password == PASSWORD:
+            print("\033[92mLogin exitoso.\033[0m")
+            clear = lambda: os.system('cls')
+            clear()
+            return True
+        else:
+            print("\033[31mUsuario o contraseña incorrectos.\033[0m")
+    print("Demasiados intentos fallidos. Saliendo...")
+    input("Presione Enter para salir...")
+    
+    return False"""
 
 class ConexionBD:
 
@@ -58,146 +78,216 @@ def mostrar_menu():
     print("3. Buscar estudiante por nombre")
     print("4. Eliminar estudiante por ID")
     print("5. Modificar estudiante por ID")
-    print("6. Reporte de estudiantes por edad")
-    print("7. Salir")
+    print("6. Listar profesores y sus cursos")
+    print("7. Eliminar profesor por ID")
+    print("8. Agregar estudiante a curso")
+    print("9. Listar cursos")
+    print("10. Salir")
+
 
 def main():
     db = ConexionBD()
     db.conectar()
 
-    #MAIN LOOP
     while True:
         mostrar_menu()
+
         opcion = input("Seleccione una opción: ")
-    #LISTAR ESTUDIANTE
+        clear = lambda: os.system('cls')
+        clear()
+        #LISTAR ESTUDIANTE
         if opcion == "1":
-
             estudiantes = db.ejecutar_consulta("SELECT * FROM estudiantes")
-
-            
-            print("\n--- Lista de Estudiantes ---")
+            inscripciones = db.ejecutar_consulta("SELECT estudiante_id, curso_id FROM inscripciones")
+            cursos = db.ejecutar_consulta("SELECT id, nombre FROM cursos")
+            clear = lambda: os.system('cls')
+            clear()
+            print("--- Lista de Estudiantes  ---")
             for est in estudiantes:
-                print(f"id: \033[31m{est[0]}\033[0m, Nombre: \033[92m{est[1]}\033[0m, Edad: {est[2]}")
-            print("-----------------------------")
-            
-    #AGREGAR ESTUDIANTE
+                cursos_ids = [i[1] for i in inscripciones if i[0] == est[0]]
+                cursos_nombres = [c[1] for c in cursos if c[0] in cursos_ids]
+                cursos_str = ', '.join(cursos_nombres) if cursos_nombres else 'Sin cursos'
+                print(f"Estudiante Id: \033[31m{est[0]}\033[0m, Nombre: \033[92m{est[1]}\033[0m, Edad: {est[2]}, RUT: {est[3]}, Cursos: {cursos_str}")
+            print("")
+            print("Estudiantes totales: \033[92m{}\033[0m".format(len(estudiantes)))
+        #AGREGAR ESTUDIANTE
         elif opcion == "2":
             try:
                 nombre = input("Ingrese el nombre del estudiante: ").strip()
-
-                if not nombre or len(nombre) < 3:# si el nombre no es un string o tiene menos de 3 caracteres
+                if not nombre or len(nombre) < 3:
                     print("\033[31mEl nombre no puede estar vacío y debe tener al menos 3 caracteres.\033[0m")
                     continue
-
-                edad = int(input("Ingrese la edad del estudiante: "))# convertimos la edad a entero, esto si no se cumple sale por el value error
-
+                nombre = nombre.capitalize()
+                edad = int(input("Ingrese la edad del estudiante: "))
                 if edad < 15 or edad > 99:
                     print("La edad debe estar entre 15 y 99 años.")
                     continue
-
                 db.ejecutar_instruccion(
                     "INSERT INTO estudiantes (nombre, edad) VALUES (?, ?)",
                     (nombre, edad)
                 )
                 try:
                     estudiantes = db.ejecutar_consulta("SELECT * FROM estudiantes")
+                    clear = lambda: os.system('cls')
+                    clear()
                     print("\n--- Lista Actualizada de Estudiantes ---")
                     for est in estudiantes:
-                        print(f"id: {est[0]}, Nombre: {est[1]}, Edad: {est[2]}")
-
+                        print(f"Estudiante Id: \033[31m{est[0]}\033[0m, Nombre: \033[92m{est[1]}\033[0m, Edad: {est[2]}")
                 except Exception as e:
                     print("\033[31mError al recuperar la lista de estudiantes:\033[0m", e)
             except ValueError:
                 print("\033[31mEdad inválida. Debe ser un número.\033[0m")
-    #BUSCAR ESTUDIANTE POR NOMBRE
+        
+        #BUSCAR ESTUDIANTE POR NOMBRE
         elif opcion == "3":
             nombre = input("Ingrese el nombre del estudiante a buscar: ").strip()
             if not nombre:
                 print("\033[31mEl nombre no puede estar vacío.\033[0m")
                 continue
+            nombre = nombre.capitalize()
             try:
-                estudiantes = db.ejecutar_consulta("SELECT * FROM estudiantes WHERE nombre LIKE ?",(f"%{nombre}%",))
+                estudiantes = db.ejecutar_consulta("SELECT * FROM estudiantes WHERE nombre LIKE ?",(f"{nombre}%",))
                 if estudiantes:
                     print("\n--- Resultados de la Búsqueda ---")
                     for est in estudiantes:
-                        print(f"id: {est[0]}, Nombre: {est[1]}, Edad: {est[2]}")
+                        print(f"id: \033[31m{est[0]}\033[0m, Nombre: \033[92m{est[1]}\033[0m, Edad: {est[2]}, RUT: {est[3]}")
                 else:
                     print("\033[31mNo se encontraron estudiantes con ese nombre.\033[0m")
             except Exception as e:
                 print("\033[31mError al buscar estudiantes:\033[0m", e)
 
-    #ELIMINAR ESTUDIANTE POR ID
+        #ELIMINAR ESTUDIANTE POR ID
         elif opcion == "4":
-            
             estudiantes = db.ejecutar_consulta("SELECT * FROM estudiantes")
-
-            
-            print("\n--- Lista de Estudiantes ---")
+            print("--- Lista de Estudiantes ---")
             for est in estudiantes:
-                print(f"id: \033[31m{est[0]}\033[0m, Nombre: \033[92m{est[1]}\033[0m, Edad: {est[2]}")
-            print("-"*28)
-            
+                print(f"Estudiante Id: \033[31m{est[0]}\033[0m, Nombre: \033[92m{est[1]}\033[0m, Edad: {est[2]}")
+            print("-----------------------------")
             try:
                 estudiante_a_eliminar = int(input("Ingrese el ID del estudiante a eliminar: "))
-
                 db.ejecutar_instruccion(
-                    "DELETE FROM estudiantes WHERE id = ?",(estudiante_a_eliminar,)) #elimina el estudiante con el id proporcionado
-                
-                # mostramos la lista actualizada
+                    "DELETE FROM estudiantes WHERE id = ?",(estudiante_a_eliminar,))
                 estudiantes = db.ejecutar_consulta("SELECT * FROM estudiantes")
                 print("\n--- Lista Actualizada de Estudiantes ---")
-
                 for est in estudiantes:
-                    print(f"id: \033[31m{est[0]}\033[0m, Nombre: \033[92m{est[1]}\033[0m, Edad: {est[2]}")  # Mostramos la lista actualizada
-                print("-"*28)
+                    print(f"Estudiante Id: \033[31m{est[0]}\033[0m, Nombre: \033[92m{est[1]}\033[0m, Edad: {est[2]}")
+                print("-----------------------------")
             except ValueError:
                 print("\033[31mID inválido. Debe ser un número.\033[0m")
-    #MODIFICAR ESTUDIANTE POR ID
+        
+        #MODIFICAR ESTUDIANTE POR ID
         elif opcion == "5":
+            print("\n--- Modificar Estudiante ---")
             try:
                 edad = int(input("Ingrese la edad del estudiante: "))
-                id = input("Ingrese el ID del estudiante a eliminar: ").strip()
-                if not id.isdigit():# si el id no es un dígito
+                id = input("Ingrese el ID del estudiante a modificar: ").strip()
+                if not id.isdigit():
                     print("El ID debe ser un número válido.")
-                    continue# salimos del ciclo y volvemos al menú
-
+                    continue
                 if edad < 15 or edad > 99:
                     print("La edad debe estar entre 15 y 99 años.")
                     continue
-
                 db.ejecutar_instruccion(
-                    #modificamos la edad del estudiante con set y lo buscamos con id where
                     "UPDATE estudiantes SET edad = ? WHERE id = ?",(edad, id))
-                
-                #mostramos la lista actualizada con select
                 estudiantes = db.ejecutar_consulta("SELECT * FROM estudiantes")
                 print("\n--- Lista Actualizada de Estudiantes ---")
                 for est in estudiantes:
-                    print(f"id: {est[0]}, Nombre: {est[1]}, Edad: {est[2]}")
+                    print(f"id: \033[31m{est[0]}\033[0m, Nombre: \033[92m{est[1]}\033[0m, Edad: {est[2]}, RUT: {est[3]}")
             except ValueError:
                 print("Edad inválida. Debe ser un número.")
-    #REPORTE DE ESTUDIANTES con edad > 18
+        #Profesores
         elif opcion == "6":
             try:
-                print("\n--- Lista de Estudiantes Totales---")
-                estudiantes_totales = db.ejecutar_consulta("SELECT * FROM estudiantes") # se usa db.ejecutar consulta siempre para hacer la sql query
-                for est in estudiantes_totales:#se recorre los estudiantes con un for
-                    print(f"id: {est[0]}, Nombre: {est[1]}, Edad: {est[2]}") # est[0] es el id, est[1] es el nombre, est[2] es la edad
-                print("\n--- Lista de Estudiantes Mayores de 18 Años ---")  
-
-                estudiantes = db.ejecutar_consulta("SELECT * FROM estudiantes WHERE edad > 18")
-                for est in estudiantes:
-                    print(f"id: {est[0]}, Nombre: {est[1]}, Edad: {est[2]}")
+                print("\n--- Lista de Profesores y sus Cursos ---")
+                profesores = db.ejecutar_consulta("SELECT id, nombre FROM profesores")
+                cursos = db.ejecutar_consulta("SELECT id, nombre, profesor_id FROM cursos")
+                for prof in profesores:
+                    cursos_prof = [c[1] for c in cursos if c[2] == prof[0]]
+                    if cursos_prof:
+                        for curso in cursos_prof:
+                            print(f"Profesor id: {prof[0]}, Nombre: \033[92m{prof[1]}\033[0m, Curso: {curso}")
+                    else:
+                        print(f"Profesor id: {prof[0]}, Nombre: \033[92m{prof[1]}\033[0m, Curso: Sin curso asignado")
+                print("-"*34)
             except Exception as e:
-                print("Error al recuperar la lista de estudiantes:", e)#manejo de errores, si falla vuelve al menú
-    #SALIR 
+                print("Error al recuperar la lista de profesores:", e)
+
+        #ELIMINAR PROFESOR POR ID
         elif opcion == "7":
+            try:
+                print("\n--- Lista de Profesores ---")
+                profesores = db.ejecutar_consulta("Select * from profesores")
+                for prof in profesores:
+                    print(f"id: {prof[0]}, Nombre: \033[92m{prof[1]}\033[0m")
+                print("-"*34)
+                profesor_a_eliminar = int(input("Ingrese el ID del profesor a eliminar: "))
+                # Verificar si el profesor tiene cursos asignados
+                cursos_profesor = db.ejecutar_consulta("SELECT id FROM cursos WHERE profesor_id = ?", (profesor_a_eliminar,))
+                if cursos_profesor:
+                    print("\033[31mNo se puede eliminar el profesor porque tiene cursos asignados.\033[0m")
+                else:
+                    db.ejecutar_instruccion(
+                        "DELETE FROM profesores WHERE id = ?",(profesor_a_eliminar,))
+                    profesores = db.ejecutar_consulta("Select * from profesores")
+                    print("\n--- Lista Actualizada de Profesores ---")
+                    for prof in profesores:
+                        print(f"id: {prof[0]}, Nombre: \033[92m{prof[1]}\033[0m")
+                    print("-"*34)
+            except Exception as e:
+                print("Error al recuperar la lista de profesores:", e)
+
+        #Agregar estudiante a curso
+        elif opcion == "8":
+            print("\n--- Agregar Estudiante a Curso ---")
+            try:
+                agregar_estudiante_a_curso = input("Ingrese el ID del estudiante a agregar al curso: ")
+                try:
+                    estudiante_id = int(agregar_estudiante_a_curso)
+                except ValueError:
+                    print("El ID del estudiante debe ser un número válido.")
+                    continue
+                estudiante = db.ejecutar_consulta("SELECT nombre FROM estudiantes WHERE id = ?", (estudiante_id,))
+                if not estudiante:
+                    print("No existe un estudiante con ese ID.")
+                    continue
+                try:
+                    curso_id = input("Ingrese el ID del curso al que desea agregar al estudiante: ")
+                    curso_id = int(curso_id)
+                except ValueError:
+                    print("El ID del curso debe ser un número válido.")
+                    continue
+                curso = db.ejecutar_consulta("SELECT nombre FROM cursos WHERE id = ?", (curso_id,))
+                if not curso:
+                    print("No existe un curso con ese ID.")
+                    continue
+                db.ejecutar_instruccion(
+                    "INSERT INTO inscripciones (estudiante_id, curso_id) VALUES (?, ?)",
+                    (estudiante_id, curso_id)
+                )
+                print(f"Estudiante '{estudiante[0][0]}' agregado al curso exitosamente: {curso[0][0]}")
+            except Exception as e:
+                print("Error al agregar estudiante al curso:", e)
+        
+        elif opcion == "9":
+            print("----Lista de cursos-----")
+            try:
+                cursos = db.ejecutar_consulta("SELECT * FROM cursos")
+                for curso in cursos:
+                    print(f"Curso Id: \033[31m{curso[0]}\033[0m, Nombre: \033[92m{curso[1]}\033[0m")
+            except Exception as e:
+                print("Error al recuperar la lista de cursos:", e)
+        #SALIR
+        elif opcion == "10":
             print("\nSaliendo...")
             db.cerrar_conexion()
+            input("Presione Enter para salir...")
             break
         else:
+            clear = lambda: os.system('cls')
+            clear()
             print("Opción inválida. Intente de nuevo.")
-
-
+            
+    db.cerrar_conexion()
 if __name__ == "__main__":
+    #if login():
     main()
