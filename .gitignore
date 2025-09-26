@@ -1,4 +1,5 @@
-# Ignora archivos de entorno    
+# Archivos y carpetas ignorados por git
+# Estos archivos no serán rastreados ni subidos al repositorio (git ignore)
 .env
 .venv
 /.venv
