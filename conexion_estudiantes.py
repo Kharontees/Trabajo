@@ -452,7 +452,7 @@ def main():
         else:
             clear = lambda: os.system('cls')
             clear()
-            print("Opción inválida. Intente de nuevo.")
+            print("\033[31mOpción inválida. Intente de nuevo.\033[0m")
             continue
 if __name__ == "__main__":
     if login():
